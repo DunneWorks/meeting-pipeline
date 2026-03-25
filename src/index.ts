@@ -148,6 +148,18 @@ export class MeetingPipeline {
     };
   }
 
+  async createVisualAnalysisPage(visual: VisualAnalysis): Promise<NotionPage> {
+    return this.notion.createVisualAnalysisPage(visual);
+  }
+
+  async analyzeImageOnDemand(imageUrl: string, meetingId?: string): Promise<VisualAnalysis> {
+    return this.imageProcessor.processSingle(imageUrl, meetingId || `on-demand-${Date.now()}`);
+  }
+
+  async analyzeVideoFrames(frames: string[], meetingId?: string): Promise<VisualAnalysis[]> {
+    return this.imageProcessor.process(frames, meetingId || `video-${Date.now()}`);
+  }
+
   private buildCombinedContext(
     textResult: {
       meetingTitle: string;

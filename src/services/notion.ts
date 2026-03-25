@@ -212,12 +212,12 @@ export class NotionService {
       },
     });
 
-    const blocks = [];
+    const blocks: Record<string, unknown>[] = [];
 
     blocks.push({
       type: "heading_1",
       heading_1: {
-        rich_text: [{ type: "text", text: { content: "📋 Meeting Summary" } }],
+        rich_text: [{ type: "text" as const, text: { content: "📋 Meeting Summary" } }],
       },
     });
 
@@ -226,7 +226,7 @@ export class NotionService {
     blocks.push({
       type: "heading_2",
       heading_2: {
-        rich_text: [{ type: "text", text: { content: "Combined Context" } }],
+        rich_text: [{ type: "text" as const, text: { content: "Combined Context" } }],
       },
     });
 
@@ -235,7 +235,7 @@ export class NotionService {
       blocks.push({
         type: "paragraph",
         paragraph: {
-          rich_text: [{ type: "text", text: { content: chunk } }],
+          rich_text: [{ type: "text" as const, text: { content: chunk } }],
         },
       });
     }
@@ -245,7 +245,7 @@ export class NotionService {
     blocks.push({
       type: "heading_2",
       heading_2: {
-        rich_text: [{ type: "text", text: { content: "📌 Categorized Findings" } }],
+        rich_text: [{ type: "text" as const, text: { content: "📌 Categorized Findings" } }],
       },
     });
 
@@ -254,7 +254,7 @@ export class NotionService {
       blocks.push({
         type: "paragraph",
         paragraph: {
-          rich_text: [{ type: "text", text: { content: chunk } }],
+          rich_text: [{ type: "text" as const, text: { content: chunk } }],
         },
       });
     }
