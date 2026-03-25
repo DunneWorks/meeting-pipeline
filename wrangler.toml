@@ -1,0 +1,14 @@
+name = "meeting-pipeline"
+main = "src/worker.ts"
+compatibility_date = "2024-06-14"
+compatibility_flags = ["nodejs_compat"]
+
+[vars]
+ENVIRONMENT = "production"
+NOTION_PIPELINE_DB = "32e7e8aabbb480ae8195ecc9d7fe1156"
+NOTION_VISUAL_DB = "32e7e8aabbb4804690e3f4b445ef4c81"
+NOTION_OFFICIAL_DB = "32e7e8aabbb48045a50df1f1af8773fa"
+NOTIFICATION_EMAIL = "sean@curaden.com"
+
+[observability]
+enabled = true
