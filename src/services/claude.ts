@@ -134,6 +134,25 @@ export class ClaudeService {
       const jsonStr = jsonMatch ? jsonMatch[1] : text;
       const parsed = JSON.parse(jsonStr);
 
+      // New format: { summary, key_points, decisions, tasks: [{ title, owner, due, context }] }
+      // Legacy format: { meetingTitle, keyPoints, actionItems, decisions, topics }
+      const isNewFormat = parsed.summary !== undefined || parsed.key_points !== undefined;
+
+      if (isNewFormat) {
+        const tasks: Array<{ title: string; owner: string | null; due: string | null; context: string }> =
+          parsed.tasks || [];
+        return {
+          meetingTitle: parsed.summary
+            ? parsed.summary.split(".")[0].trim().slice(0, 80) || "Untitled Meeting"
+            : "Untitled Meeting",
+          keyPoints: parsed.key_points || [],
+          actionItems: tasks.map((t) => ({ task: t.title, assignee: t.owner ?? undefined })),
+          decisions: parsed.decisions || [],
+          topics: [],
+          tasks,
+        };
+      }
+
       return {
         meetingTitle: parsed.meetingTitle || parsed.title || "Untitled Meeting",
         keyPoints: parsed.keyPoints || parsed.discussion_points || [],

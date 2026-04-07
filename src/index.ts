@@ -3,6 +3,7 @@ import { ImageProcessor } from "./processors/image-processor";
 import { QualityScorer } from "./processors/quality-scorer";
 import { FirefliesService } from "./services/fireflies";
 import { NotionService } from "./services/notion";
+import { AsanaService } from "./services/asana";
 import type {
   FirefliesWebhookPayload,
   PipelineMeeting,
@@ -19,11 +20,14 @@ export interface PipelineConfig {
   notionVisualDbId: string;
   notionOfficialDbId: string;
   notificationEmail: string;
+  asanaAccessToken?: string;
+  asanaProjectGid?: string;
 }
 
 export class MeetingPipeline {
   private fireflies: FirefliesService;
   private notion: NotionService;
+  private asana: AsanaService | null;
   private textProcessor: TextProcessor;
   private imageProcessor: ImageProcessor;
   private qualityScorer: QualityScorer;
@@ -38,6 +42,10 @@ export class MeetingPipeline {
       config.notionVisualDbId,
       config.notionOfficialDbId
     );
+    this.asana =
+      config.asanaAccessToken && config.asanaProjectGid
+        ? new AsanaService(config.asanaAccessToken, config.asanaProjectGid)
+        : null;
     this.textProcessor = new TextProcessor(config.anthropicApiKey);
     this.imageProcessor = new ImageProcessor(config.anthropicApiKey);
     this.qualityScorer = new QualityScorer(config.anthropicApiKey);
@@ -58,6 +66,14 @@ export class MeetingPipeline {
     const transcript = this.fireflies.buildFullTranscript(payload);
 
     const textResult = await this.textProcessor.process(transcript);
+
+    if (this.asana && textResult.tasks && textResult.tasks.length > 0) {
+      await Promise.all(
+        textResult.tasks.map((task) => this.asana!.createTask(task).catch((err) => {
+          console.error(`Failed to create Asana task "${task.title}":`, err);
+        }))
+      );
+    }
 
     const { scores, normalizedNotes } = await this.qualityScorer.score(
       textResult

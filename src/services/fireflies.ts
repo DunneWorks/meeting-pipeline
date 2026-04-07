@@ -106,15 +106,23 @@ export class FirefliesService {
     return "";
   }
 
-  validateWebhookSignature(
+  async validateWebhookSignature(
     payload: string,
     signature: string,
     secret: string
-  ): boolean {
+  ): Promise<boolean> {
     const encoder = new TextEncoder();
-    const key = encoder.encode(secret);
-    const data = encoder.encode(payload);
-
-    return signature === `sha256=${signature}`;
+    const key = await crypto.subtle.importKey(
+      "raw",
+      encoder.encode(secret),
+      { name: "HMAC", hash: "SHA-256" },
+      false,
+      ["sign"]
+    );
+    const sigBytes = await crypto.subtle.sign("HMAC", key, encoder.encode(payload));
+    const hexSig = Array.from(new Uint8Array(sigBytes))
+      .map((b) => b.toString(16).padStart(2, "0"))
+      .join("");
+    return signature === `sha256=${hexSig}`;
   }
 }

@@ -12,6 +12,8 @@ interface Env {
   NOTION_OFFICIAL_DB: string;
   WEBHOOK_SECRET: string;
   NOTIFICATION_EMAIL: string;
+  ASANA_ACCESS_TOKEN?: string;
+  ASANA_PROJECT_GID?: string;
   SLACK_WEBHOOK_URL?: string;
 }
 
@@ -24,6 +26,8 @@ function createPipeline(env: Env): MeetingPipeline {
     notionVisualDbId: env.NOTION_VISUAL_DB,
     notionOfficialDbId: env.NOTION_OFFICIAL_DB,
     notificationEmail: env.NOTIFICATION_EMAIL,
+    asanaAccessToken: env.ASANA_ACCESS_TOKEN,
+    asanaProjectGid: env.ASANA_PROJECT_GID,
   });
 }
 
