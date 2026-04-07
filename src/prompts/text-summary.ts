@@ -3,6 +3,7 @@ export function textSummaryPrompt(transcript: string): string {
 
 Return ONLY valid JSON in this exact format, with no markdown fencing:
 {
+  "title": "Short meeting title (max 60 chars)",
   "summary": "A concise 2-3 sentence summary of the meeting",
   "key_points": ["Key point 1", "Key point 2"],
   "decisions": ["Decision 1", "Decision 2"],
