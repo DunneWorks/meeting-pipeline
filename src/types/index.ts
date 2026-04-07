@@ -74,6 +74,13 @@ export interface FirefliesSegment {
   end_time: number;
 }
 
+export interface ExtractedTask {
+  title: string;
+  owner: string | null;
+  due: string | null;
+  context: string;
+}
+
 export interface ProcessedTextResult {
   meetingTitle: string;
   keyPoints: string[];
@@ -83,6 +90,7 @@ export interface ProcessedTextResult {
   }>;
   decisions: string[];
   topics: string[];
+  tasks?: ExtractedTask[];
 }
 
 export interface QualityScores {
