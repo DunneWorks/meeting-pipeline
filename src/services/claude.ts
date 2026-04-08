@@ -142,9 +142,7 @@ export class ClaudeService {
         const tasks: Array<{ title: string; owner: string | null; due: string | null; context: string }> =
           parsed.tasks || [];
         return {
-          meetingTitle: parsed.summary
-            ? parsed.summary.split(".")[0].trim().slice(0, 80) || "Untitled Meeting"
-            : "Untitled Meeting",
+          meetingTitle: parsed.title || "Untitled Meeting",
           keyPoints: parsed.key_points || [],
           actionItems: tasks.map((t) => ({ task: t.title, assignee: t.owner ?? undefined })),
           decisions: parsed.decisions || [],

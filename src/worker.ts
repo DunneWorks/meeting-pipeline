@@ -6,11 +6,6 @@ interface Env {
   FIREFLIES_API_KEY: string;
   FIREFLIES_WEBHOOK_SECRET: string;
   ANTHROPIC_API_KEY: string;
-  NOTION_API_KEY: string;
-  NOTION_PIPELINE_DB: string;
-  NOTION_VISUAL_DB: string;
-  NOTION_OFFICIAL_DB: string;
-  WEBHOOK_SECRET: string;
   NOTIFICATION_EMAIL: string;
   ASANA_ACCESS_TOKEN?: string;
   ASANA_PROJECT_GID?: string;
@@ -20,21 +15,11 @@ interface Env {
 function createPipeline(env: Env): MeetingPipeline {
   return new MeetingPipeline({
     firefliesApiKey: env.FIREFLIES_API_KEY,
-    notionApiKey: env.NOTION_API_KEY,
     anthropicApiKey: env.ANTHROPIC_API_KEY,
-    notionPipelineDbId: env.NOTION_PIPELINE_DB,
-    notionVisualDbId: env.NOTION_VISUAL_DB,
-    notionOfficialDbId: env.NOTION_OFFICIAL_DB,
     notificationEmail: env.NOTIFICATION_EMAIL,
     asanaAccessToken: env.ASANA_ACCESS_TOKEN,
     asanaProjectGid: env.ASANA_PROJECT_GID,
   });
-}
-
-interface AnalyzeImageRequest {
-  imageUrl: string;
-  meetingId?: string;
-  saveToNotion?: boolean;
 }
 
 async function handleWebhook(request: Request, env: Env): Promise<Response> {
@@ -60,32 +45,23 @@ async function handleWebhook(request: Request, env: Env): Promise<Response> {
       body.meeting.host_email ||
       env.NOTIFICATION_EMAIL;
 
-    await sendNotification(
-      ownerEmail,
-      body.meeting.title,
-      result.pipelinePage.url,
-      env.SLACK_WEBHOOK_URL
-    );
+    await sendNotification(ownerEmail, result.meetingTitle, env.SLACK_WEBHOOK_URL);
 
     return new Response(
       JSON.stringify({
         success: true,
-        pipelinePageId: result.pipelinePage.id,
-        visualPagesCreated: result.visualPages.length,
-        officialRecordId: result.officialPage.id,
+        meetingTitle: result.meetingTitle,
+        asanaTasksCreated: result.asanaTasks.length,
+        visualAnalyses: result.visualAnalyses.length,
       }),
       { status: 200, headers: { "Content-Type": "application/json" } }
     );
   } catch (error) {
     console.error("Pipeline error:", error);
-    const errorMessage = error instanceof Error ? error.message : "Unknown error";
-    const errorStack = error instanceof Error ? error.stack : "";
-    
     return new Response(
       JSON.stringify({
         error: "Pipeline processing failed",
-        message: errorMessage,
-        stack: errorStack,
+        message: error instanceof Error ? error.message : "Unknown error",
       }),
       { status: 500, headers: { "Content-Type": "application/json" } }
     );
@@ -99,10 +75,7 @@ async function handleHealth(): Promise<Response> {
       timestamp: new Date().toISOString(),
       service: "meeting-pipeline",
     }),
-    {
-      status: 200,
-      headers: { "Content-Type": "application/json" },
-    }
+    { status: 200, headers: { "Content-Type": "application/json" } }
   );
 }
 
@@ -112,8 +85,8 @@ async function handleAnalyzeImage(request: Request, env: Env): Promise<Response>
   }
 
   try {
-    const body = await request.json() as AnalyzeImageRequest;
-    
+    const body = await request.json() as { imageUrl: string; meetingId?: string };
+
     if (!body.imageUrl) {
       return new Response(
         JSON.stringify({ error: "Missing imageUrl" }),
@@ -123,20 +96,7 @@ async function handleAnalyzeImage(request: Request, env: Env): Promise<Response>
 
     const imageProcessor = new ImageProcessor(env.ANTHROPIC_API_KEY);
     const meetingId = body.meetingId || `manual-${Date.now()}`;
-    
     const result = await imageProcessor.processSingle(body.imageUrl, meetingId);
-
-    if (body.saveToNotion) {
-      const pipeline = createPipeline(env);
-      const page = await pipeline.createVisualAnalysisPage(result);
-      return new Response(
-        JSON.stringify({
-          analysis: result,
-          notionPage: page,
-        }),
-        { status: 200, headers: { "Content-Type": "application/json" } }
-      );
-    }
 
     return new Response(
       JSON.stringify({ analysis: result }),
@@ -161,7 +121,7 @@ async function handleAnalyzeVideo(request: Request, env: Env): Promise<Response>
 
   try {
     const body = await request.json() as { videoUrl: string; frames?: string[]; meetingId?: string };
-    
+
     if (!body.videoUrl && (!body.frames || body.frames.length === 0)) {
       return new Response(
         JSON.stringify({ error: "Missing videoUrl or frames array" }),
@@ -171,18 +131,11 @@ async function handleAnalyzeVideo(request: Request, env: Env): Promise<Response>
 
     const imageProcessor = new ImageProcessor(env.ANTHROPIC_API_KEY);
     const meetingId = body.meetingId || `video-${Date.now()}`;
-    
-    const framesToAnalyze = body.frames && body.frames.length > 0 
-      ? body.frames 
-      : [body.videoUrl];
-    
+    const framesToAnalyze = body.frames && body.frames.length > 0 ? body.frames : [body.videoUrl];
     const results = await imageProcessor.process(framesToAnalyze, meetingId);
 
     return new Response(
-      JSON.stringify({ 
-        frameCount: results.length,
-        analyses: results,
-      }),
+      JSON.stringify({ frameCount: results.length, analyses: results }),
       { status: 200, headers: { "Content-Type": "application/json" } }
     );
   } catch (error) {
@@ -198,24 +151,13 @@ async function handleAnalyzeVideo(request: Request, env: Env): Promise<Response>
 }
 
 export default {
-  async fetch(request: Request, env: Env, ctx: ExecutionContext): Promise<Response> {
+  async fetch(request: Request, env: Env, _ctx: ExecutionContext): Promise<Response> {
     const url = new URL(request.url);
 
-    if (url.pathname === "/health") {
-      return handleHealth();
-    }
-
-    if (url.pathname === "/webhook/fireflies" && request.method === "POST") {
-      return handleWebhook(request, env);
-    }
-
-    if (url.pathname === "/analyze-image" && request.method === "POST") {
-      return handleAnalyzeImage(request, env);
-    }
-
-    if (url.pathname === "/analyze-video" && request.method === "POST") {
-      return handleAnalyzeVideo(request, env);
-    }
+    if (url.pathname === "/health") return handleHealth();
+    if (url.pathname === "/webhook/fireflies" && request.method === "POST") return handleWebhook(request, env);
+    if (url.pathname === "/analyze-image" && request.method === "POST") return handleAnalyzeImage(request, env);
+    if (url.pathname === "/analyze-video" && request.method === "POST") return handleAnalyzeVideo(request, env);
 
     return new Response("Not found", { status: 404 });
   },
