@@ -5,7 +5,7 @@ compatibility_flags = ["nodejs_compat"]
 
 [vars]
 ENVIRONMENT = "production"
-ASANA_PROJECT_GID = ""
+ASANA_PROJECT_GID = "1171371475355741"
 NOTIFICATION_EMAIL = "sean@curaden.com"
 
 [observability]
